@@ -1,6 +1,7 @@
 import 'package:app_trac_nghiem/src/persistence/database.dart';
 import 'package:app_trac_nghiem/src/persistence/entity/question.dart';
 import 'package:app_trac_nghiem/src/views/add_question_screen.dart';
+import 'package:app_trac_nghiem/src/views/manage_question_screen.dart';
 import 'package:app_trac_nghiem/src/views/pick_questions_screen.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -46,21 +47,24 @@ class _MainScreenState extends State<MainScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => AddQuestionScreen(
-                              onAddQuestionScreen: (content, label) async {
+                            builder: (context) => ManageQuestionScreen(
+                              onDeleteQuestion: (id) {
+                                database?.questionDao.deleteQuestion(id);
+                              },
+                              getQuestions: getQuestions,
+                              onAddQuestion: (content, label) async {
                                 await database?.questionDao.inserQuestion([
                                   Question(
                                     content: content,
                                     label: label,
                                   )
                                 ]);
-                                Navigator.of(context).pop();
                               },
                             ),
                           ),
                         );
                       },
-                      child: const Text("Tạo câu hỏi"),
+                      child: const Text("Quản lý câu hỏi"),
                     ),
                     ElevatedButton(
                       onPressed: () async {
@@ -73,7 +77,7 @@ class _MainScreenState extends State<MainScreen> {
                           ),
                         );
                       },
-                      child: const Text("Chọn câu hỏi"),
+                      child: const Text("Tạo đề"),
                     ),
                   ],
                 ),

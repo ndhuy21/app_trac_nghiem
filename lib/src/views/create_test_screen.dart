@@ -1,9 +1,11 @@
-import 'package:app_trac_nghiem/src/components/pick_question_label.dart';
 import 'package:app_trac_nghiem/src/components/question_card.dart';
 import 'package:app_trac_nghiem/src/persistence/entity/question.dart';
+import 'package:app_trac_nghiem/src/utils/export_docx.dart';
+import 'package:app_trac_nghiem/src/utils/export_pdf.dart';
 import 'package:drag_and_drop_lists/drag_and_drop_lists.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:open_file/open_file.dart';
 
 class CreateTestScreen extends StatefulWidget {
   const CreateTestScreen({
@@ -71,17 +73,32 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        primary: Colors.blue,
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 4, horizontal: 28),
-                      ),
-                      child: const Text(
-                        "Xuất đề",
-                        style: TextStyle(fontSize: 20),
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ExportButton(
+                            title: "Xuất PDF",
+                            export: () async {
+                              final fileName =
+                                  await exportPdf(widget.questions);
+                              return fileName;
+                            },
+                          ),
+                        ),
+                        const SizedBox(
+                          width: 8,
+                        ),
+                        Expanded(
+                          child: ExportButton(
+                            title: "Xuất DOCX",
+                            export: () async {
+                              final fileName =
+                                  await exportDocx(widget.questions);
+                              return fileName;
+                            },
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(
                       height: 8,
@@ -100,6 +117,49 @@ class _CreateTestScreenState extends State<CreateTestScreen> {
             )
           ],
         ),
+      ),
+    );
+  }
+}
+
+class ExportButton extends StatelessWidget {
+  const ExportButton({
+    Key? key,
+    required this.title,
+    required this.export,
+  }) : super(key: key);
+
+  final String title;
+  final Future<String> Function() export;
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: () async {
+        final filePath = await export();
+        final snackBar = SnackBar(
+          backgroundColor: filePath.isEmpty ? Colors.red.shade900 : null,
+          content: filePath.isEmpty
+              ? const Text("Có lỗi xảy ra")
+              : Text("Đã lưu: " + filePath),
+          action: filePath.isEmpty
+              ? null
+              : SnackBarAction(
+                  label: "Mở",
+                  onPressed: () {
+                    OpenFile.open(filePath);
+                  },
+                ),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      },
+      style: ElevatedButton.styleFrom(
+        primary: Colors.blue,
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 28),
+      ),
+      child: Text(
+        title,
+        style: const TextStyle(fontSize: 20),
       ),
     );
   }

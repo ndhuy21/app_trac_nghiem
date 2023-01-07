@@ -1,4 +1,5 @@
 import 'package:app_trac_nghiem/src/components/pick_question_label.dart';
+import 'package:app_trac_nghiem/src/components/question_editor.dart';
 import 'package:app_trac_nghiem/src/utils/extract_question.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -7,8 +8,10 @@ import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart
 import 'package:image_picker/image_picker.dart';
 
 class AddQuestionScreen extends StatefulWidget {
-  const AddQuestionScreen({Key? key, required this.onAddQuestionScreen})
-      : super(key: key);
+  const AddQuestionScreen({
+    Key? key,
+    required this.onAddQuestionScreen,
+  }) : super(key: key);
 
   final Function(String content, String label) onAddQuestionScreen;
 
@@ -17,28 +20,28 @@ class AddQuestionScreen extends StatefulWidget {
 }
 
 class _AddQuestionScreenState extends State<AddQuestionScreen> {
-  final _textController = TextEditingController();
   final _picker = ImagePicker();
   final TextRecognizer _textRecognizer =
       TextRecognizer(script: TextRecognitionScript.latin);
 
-  String label = "Cơ bản";
+  List<String> questions = [""];
   bool waiting = false;
 
   void recognizeText(ImageSource source) async {
-    final image = await _picker.pickImage(source: source);
+    final image = await _picker.getImage(source: source);
     if (image == null) {
       return;
     }
     setState(() {
       waiting = true;
+      questions = [];
     });
     final inputImage = InputImage.fromFilePath(image.path);
     final recognizedText = await _textRecognizer.processImage(inputImage);
     final textBlocks =
         recognizedText.blocks.map((block) => block.text).toList();
-    final questionText = extractQuestion(textBlocks);
-    _textController.text = questionText;
+    questions = extractQuestion(textBlocks);
+
     setState(() {
       waiting = false;
     });
@@ -46,7 +49,6 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
 
   @override
   void dispose() {
-    _textController.dispose();
     _textRecognizer.close();
     super.dispose();
   }
@@ -62,95 +64,93 @@ class _AddQuestionScreenState extends State<AddQuestionScreen> {
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            SliverFillRemaining(
+            SliverToBoxAdapter(
               child: Stack(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Row(
                       children: [
-                        Row(
-                          children: [
-                            ElevatedButton(
-                              onPressed: () async {
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              if (!waiting) {
                                 recognizeText(ImageSource.camera);
-                              },
-                              child: Row(children: const [
+                              }
+                            },
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: const [
                                 Text("Máy ảnh"),
-                                Icon(Boxicons.bxs_camera),
-                              ]),
-                            ),
-                            const SizedBox(
-                              width: 8,
-                            ),
-                            ElevatedButton(
-                              onPressed: () async {
-                                recognizeText(ImageSource.gallery);
-                              },
-                              child: Row(
-                                children: const [
-                                  Text("Thư viện"),
-                                  Icon(Boxicons.bxs_photo_album),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(
-                              width: 8,
-                            ),
-                            Expanded(
-                              child: ElevatedButton(
-                                onPressed: () async {
-                                  widget.onAddQuestionScreen(
-                                    _textController.text,
-                                    label,
-                                  );
-                                },
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: const [
-                                    Text("Lưu"),
-                                  ],
+                                SizedBox(
+                                  width: 4,
                                 ),
-                              ),
+                                Icon(Boxicons.bxs_camera),
+                              ],
                             ),
-                          ],
-                        ),
-                        PickQuestionLabel(
-                            title: "Loại câu hỏi: ",
-                            label: label,
-                            questionLabels: const [
-                              "Cơ bản",
-                              "Hiểu",
-                              "Áp dụng",
-                              "Nâng cao"
-                            ],
-                            onUpdateLabel: (newLabel) {
-                              setState(() {
-                                label = newLabel;
-                              });
-                            }),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: _textController,
-                          keyboardType: TextInputType.multiline,
-                          maxLines: null,
-                          decoration: const InputDecoration(
-                            border: OutlineInputBorder(),
                           ),
-                        )
+                        ),
+                        const SizedBox(
+                          width: 8,
+                        ),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              if (!waiting) {
+                                recognizeText(ImageSource.gallery);
+                              }
+                            },
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: const [
+                                Text(
+                                  "Thư viện",
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                                SizedBox(
+                                  width: 4,
+                                ),
+                                Icon(Boxicons.bxs_photo_album),
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                  if (waiting)
-                    Positioned.fill(
-                      child: Container(
-                        color: Colors.black.withOpacity(0.5),
-                        child: const CupertinoActivityIndicator(),
-                      ),
-                    )
                 ],
               ),
             ),
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  return Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    child: QuestionEditor(
+                      questionText: questions[index],
+                      onRemove: () {
+                        questions.removeAt(index);
+                        setState(() {});
+                      },
+                      onAdd: (content, label) {
+                        widget.onAddQuestionScreen(content, label);
+                        questions.removeAt(index);
+                        setState(() {});
+                      },
+                    ),
+                  );
+                },
+                childCount: questions.length,
+              ),
+            ),
+            if (waiting)
+              SliverToBoxAdapter(
+                  child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Text("Đang nhận diên câu hỏi"),
+                ),
+              ))
           ],
         ),
       ),
